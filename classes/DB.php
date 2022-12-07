@@ -34,18 +34,18 @@ class DB
     public function query($sql, $params = array())
     {
         $this->_error = false;
-        if($this->_query = $this->_pdo->prepare($sql)){
-            if(count($params)){
+        if ($this->_query = $this->_pdo->prepare($sql)) {
+            if (count($params)) {
                 $x = 1;
-                foreach($params as  $param){
-                    $this->_query->bindValue($x,$param);
+                foreach ($params as  $param) {
+                    $this->_query->bindValue($x, $param);
                     $x++;
                 }
             }
-            if($this->_query->execute()){
+            if ($this->_query->execute()) {
                 $this->_result = $this->_query->fetchAll(PDO::FETCH_OBJ);
-                $this->_count = $this->_query->rowCount(); 
-            }else{
+                $this->_count = $this->_query->rowCount();
+            } else {
                 $this->_error = true;
             }
         }
@@ -53,34 +53,87 @@ class DB
     }
 
 
-    public function error(){
+    public function error()
+    {
         return $this->_error;
-
     }
 
-    public function action($action , $table,$where=array()){
-        if(count($where) === 3){
-            $operators = array('=','<','>','>=','<=');
+    public function action($action, $table, $where = array())
+    {
+        if (count($where) === 3) {
+            $operators = array('=', '<', '>', '>=', '<=');
             $field = $where[0];
             $operator = $where[1];
             $value = $where[2];
-            if(in_array($operator,$operators)){
+            if (in_array($operator, $operators)) {
                 $sql = "{$action} FROM {$table} WHERE {$field} {$operator} ?";
-                if(!$this->query($sql,array($value))->error()){
+                if (!$this->query($sql, array($value))->error()) {
                     return $this;
                 }
             }
         }
-            return false;
+        return false;
+    }
+    public function results()
+    {
+        return  $this->_result;
     }
 
-    public function get($table,$where){
-        return $this->action('SELECT *',$table,$where);
+    public function first()
+    {
+        return $this->results()[0];
     }
-    public function delete($table,$where){
-        return $this->action('DELETE',$table,$where);
+    public function get($table, $where)
+    {
+        return $this->action('SELECT *', $table, $where);
     }
-    public function count(){
+    public function delete($table, $where)
+    {
+        return $this->action('DELETE', $table, $where);
+    }
+
+
+    public function insert($table, $fields = array())
+    {
+       
+            $keys = array_keys($fields);
+            $value = '';
+            $x = 1;
+            foreach ($fields as $field) {
+                $value .= '?';
+                if ($x < count($fields)) {
+                    $value .= ', ';
+                }
+                $x++;
+            }
+            $sql = "INSERT INTO users(`" . implode('`,`', $keys) . "`) VALUES({$value})";
+            if (!$this->query($sql, $fields)->error()) {
+                return true;
+            }
+     
+        return false;
+    }
+
+    public function update($table,$id, $fields = array()){
+      
+        $set = '';
+        $x =1;
+        foreach($fields as $name=>$value){
+            $set .= "{$name} = ?";
+            if($x < count($fields)){
+                $set .= ', ';
+            }
+            $x++;
+        }
+        $sql = "UPDATE {$table} SET {$set} WHERE id = {$id}";
+        if(!$this->query($sql,$fields)->error()){
+            return true;
+        }
+        return false;
+
+    }
+    public function count()
+    {
         return $this->_count;
     }
 }
